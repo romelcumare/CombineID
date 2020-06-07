@@ -294,16 +294,14 @@ Sub CombineParts(Model1 As String, Model2 As String)
 '
 '        FaceNormal = swFace.Normal
 '        'Debug.Print "Largest Face Normal Vector = (" & FaceNormal(0) & ", " & FaceNormal(1) & ", " & FaceNormal(2) & ")"
-            
-        
-               
+                   
         'Flag models as dirty
         swPart1.SetSaveFlag
         swPart2.SetSaveFlag
         'Debug.Print " is it Dirty? " & swPart1.GetSaveFlag
         'Debug.Print " is it Dirty? " & swPart2.GetSaveFlag
         
-        Debug.Print ""
+        'Debug.Print ""
         Debug.Print " CombineID " & CombineID & ": TRUE"
         Debug.Print "------------------------------------"
         
@@ -352,17 +350,19 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     Dim NumofLaminates1     As Integer
     Dim NumofLaminates2     As Integer
     
-    Dim TopLam1             As String
-    Dim BottomLam1          As String
-    Dim FrontEB1            As String
-    Dim BackEB1             As String
-    Dim LeftEB1             As String
-    Dim RightEB1            As String
+    Dim Top1                As String
+    Dim Bottom1             As String
+    Dim Front1              As String
+    Dim Back1               As String
+    Dim Left1               As String
+    Dim Right1              As String
     
-    FrontEB1 = "SWOODCP_EdgeFrontMaterial"
-    BackEB1 = "SWOODCP_EdgeBacktMaterial"
-    LeftEB1 = "SWOODCP_EdgeLeftMaterial"
-    RightEB1 = "SWOODCP_EdgeRightMaterial"
+    Dim Top2                As String
+    Dim Bottom2             As String
+    Dim Front2              As String
+    Dim Back2               As String
+    Dim Left2               As String
+    Dim Right2              As String
     
     Set config1 = swModel1.GetActiveConfiguration
     Set config2 = swModel2.GetActiveConfiguration
@@ -419,57 +419,139 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     'Debug.Print "Number of Laminates 1: " & NumofLaminates1
     'Debug.Print "Number of Laminates 2: " & NumofLaminates2
     
-    If NumofEdgebands1 = NumofEdgebands2 And NumofLaminates1 = NumofLaminates2 Then
+    If Not (NumofEdgebands1 = NumofEdgebands2 And NumofLaminates1 = NumofLaminates2) Then
+        CheckProperties = False
+        Debug.Print "Different number of Edgebands and Laminates"
+        Exit Function
+    End If
+    
+    If NumofEdgebands1 + NumofEdgebands2 + NumofLaminates1 + NumofLaminates2 = 0 Then
+        Debug.Print "No Edgebands or Laminates present"
         CheckProperties = True
+        Exit Function
     End If
     
     'Debug.Print "CheckProperties result: " & CheckProperties
     
-    'Check if panel was flipped or rotated
-    Debug.Print ""
+    'Get Panel1 Data
+    Top1 = cusPropMgr1.Get("SWOODCP_TopStockMaterial")
+    Bottom1 = cusPropMgr1.Get("SWOODCP_BottomStockMaterial")
+    Front1 = cusPropMgr1.Get("SWOODCP_EdgeFrontMaterial")
+    Back1 = cusPropMgr1.Get("SWOODCP_EdgeBackMaterial")
+    Left1 = cusPropMgr1.Get("SWOODCP_EdgeLeftMaterial")
+    Right1 = cusPropMgr1.Get("SWOODCP_EdgeRightMaterial")
     
+    'Get Panel2 Data
+    Top2 = cusPropMgr2.Get("SWOODCP_TopStockMaterial")
+    Bottom2 = cusPropMgr2.Get("SWOODCP_BottomStockMaterial")
+    Front2 = cusPropMgr2.Get("SWOODCP_EdgeFrontMaterial")
+    Back2 = cusPropMgr2.Get("SWOODCP_EdgeBackMaterial")
+    Left2 = cusPropMgr2.Get("SWOODCP_EdgeLeftMaterial")
+    Right2 = cusPropMgr2.Get("SWOODCP_EdgeRightMaterial")
+    
+    'Check if panel was flipped or rotated
     If Round(RotMatrix.ArrayData(8), 5) = 1 Then
     
-        Debug.Print " Panel not Flipped"
+        'Debug.Print " Panel not Flipped"
         
+        'Check Laminates
+        If Not (Top1 = Top2 And Bottom1 = Bottom2) Then
+            CheckProperties = False
+            Exit Function
+        ElseIf NumofEdgebands1 + NumofEdgebands2 = 0 Then
+            CheckProperties = True
+            Exit Function
+        End If
+        
+        'Check Edgebands
         If RotMatrix.ArrayData(0) = 1 And RotMatrix.ArrayData(4) = 1 Then
             Debug.Print " Panel not Rotated"
+            
+             If Front1 = Front2 And Back1 = Back2 And Right1 = Right2 And Left1 = Left2 Then
+                CheckProperties = True
+                Exit Function
+            End If
+            
         End If
         
         If Round(RotMatrix.ArrayData(0), 5) = -1 And Round(RotMatrix.ArrayData(4), 5) = -1 Then
-            Debug.Print " Front => Back"
-            Debug.Print " Right => Left"
+            'Debug.Print " Front => Back, Back => Front, Right => Left, Left => Right"
+            
+            If Front1 = Back2 And Back1 = Front2 And Right1 = Left2 And Left1 = Right2 Then
+                CheckProperties = True
+                Exit Function
+            End If
+            
         End If
         
         If Round(RotMatrix.ArrayData(1), 5) = 1 And Round(RotMatrix.ArrayData(3), 5) = -1 Then
-            Debug.Print " Front => Left"
-            Debug.Print " Back => Right"
+            'Debug.Print " Front => Right, Back => Left, Right => Back, Left => Front"
+            
+            If Front1 = Right2 And Back1 = Left2 And Right1 = Back2 And Left1 = Front2 Then
+                CheckProperties = True
+                Exit Function
+            End If
+            
         End If
         
         If Round(RotMatrix.ArrayData(1), 5) = -1 And Round(RotMatrix.ArrayData(3), 5) = 1 Then
-            Debug.Print " Front => Right"
-            Debug.Print " Back => Left"
+            'Debug.Print " Front => Left, Back => Right, Right => Front, Left => Back"
+                
+            If Front1 = Left2 And Back1 = Right2 And Right1 = Front2 And Left1 = Back2 Then
+                CheckProperties = True
+                Exit Function
+            End If
+            
         End If
     
     ElseIf Round(RotMatrix.ArrayData(8), 5) = -1 Then
-        Debug.Print " Top => Bottom"
+        'Debug.Print " Top => Bottom"
         
+        'Check Laminates
+        If Not (Top1 = Bottom2 And Bottom1 = Top2) Then
+            CheckProperties = False
+            Exit Function
+        ElseIf NumofEdgebands1 + NumofEdgebands2 = 0 Then
+            CheckProperties = True
+            Exit Function
+        End If
+        
+        'Check Edgebands
         If Round(RotMatrix.ArrayData(1), 5) = -1 And Round(RotMatrix.ArrayData(3), 5) = -1 Then
-            Debug.Print " Front => Right"
-            Debug.Print " Back => Left"
+            'Debug.Print " Front => Right, Back => Left, Right => Front, Left => Back "
+            
+            If Front1 = Right2 And Back1 = Left2 And Right1 = Front2 And Left1 = Back2 Then
+                CheckProperties = True
+                Exit Function
+            End If
+            
         End If
         
         If Round(RotMatrix.ArrayData(1), 5) = 1 And Round(RotMatrix.ArrayData(3), 5) = 1 Then
-            Debug.Print " Front => Left"
-            Debug.Print " Back => Right"
+            'Debug.Print " Front => Left, Back => Right, Right => Back, Left => Front"
+            
+            If Front1 = Left2 And Back1 = Right2 And Right1 = Back2 And Left1 = Front2 Then
+                CheckProperties = True
+                Exit Function
+            End If
         End If
         
         If Round(RotMatrix.ArrayData(0), 5) = 1 And Round(RotMatrix.ArrayData(4), 5) = -1 Then
-            Debug.Print " Front => Back"
+            'Debug.Print " Front => Back, Back => Front, Right => Right, Left => Left"
+            
+            If Front1 = Back2 And Back1 = Front2 And Right1 = Right2 And Left1 = Left2 Then
+                CheckProperties = True
+                Exit Function
+            End If
         End If
         
         If Round(RotMatrix.ArrayData(0), 5) = -1 And Round(RotMatrix.ArrayData(4), 5) = 1 Then
-            Debug.Print " Right => Left"
+            'Debug.Print " Front => Front, Back => Back, Right => Left, Left => Right"
+            
+            If Front1 = Front2 And Back1 = Back2 And Right1 = Left2 And Left1 = Right2 Then
+                CheckProperties = True
+                Exit Function
+            End If
         End If
     End If
            
@@ -580,10 +662,10 @@ Function GetTransformMatrix(swThisBody As SldWorks.Body2, swOtherBody As SldWork
             'Debug.Print "Determinant: " & Determinant
             'Debug.Print ""
 
-            Debug.Print "Rotation:"
-            Debug.Print vbTab & Round(vXfm(0), 6), Round(vXfm(1), 6), Round(vXfm(2), 6)
-            Debug.Print vbTab & Round(vXfm(3), 6), Round(vXfm(4), 6), Round(vXfm(5), 6)
-            Debug.Print vbTab & Round(vXfm(6), 6), Round(vXfm(7), 6), Round(vXfm(8), 6)
+            'Debug.Print "Rotation:"
+            'Debug.Print vbTab & Round(vXfm(0), 6), Round(vXfm(1), 6), Round(vXfm(2), 6)
+            'Debug.Print vbTab & Round(vXfm(3), 6), Round(vXfm(4), 6), Round(vXfm(5), 6)
+            'Debug.Print vbTab & Round(vXfm(6), 6), Round(vXfm(7), 6), Round(vXfm(8), 6)
             'Debug.Print "Translation:"
             'Debug.Print vbTab & Round(vXfm(9), 4), Round(vXfm(10), 4), Round(vXfm(11), 4)
             'Debug.Print "Scaling: " & vXfm(12)
