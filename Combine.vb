@@ -45,7 +45,7 @@ Sub main()
     Set swApp = Application.SldWorks
     Set swModel = swApp.ActiveDoc
 
-    AssemblyName = FileName(swModel.GetTitle())
+    AssemblyName = fileName(swModel.GetTitle())
          
     If Not swModel.GetType = SwConst.swDocASSEMBLY Then
         MsgBox "The active document is not an assembly model.", vbOKOnly
@@ -84,9 +84,9 @@ Sub main()
     
     With ProgressBar
         .Bar.Width = 0
-        .Text.Caption = "Getting Parts..."
-        .Text2.Caption = "0% Complete"
-        .Text3.Caption = "Processing..."
+        .Text.caption = "Getting Parts..."
+        .Text2.caption = "0% Complete"
+        .Text3.caption = "Processing..."
         .Show vbModeless
     End With
     
@@ -203,7 +203,7 @@ Sub CombineParts(Model1 As String, Model2 As String)
     Dim swBody1                         As SldWorks.Body2
     Dim swBody2                         As SldWorks.Body2
     Dim swFace                          As SldWorks.Entity
-    Dim FaceNormal                      As Variant
+    Dim FaceNormal(15)                  As Variant
     Dim longstatus                      As Long
     Dim longwarnings                    As Long
     Dim boolstatus                      As Boolean
@@ -212,7 +212,7 @@ Sub CombineParts(Model1 As String, Model2 As String)
     Dim j                               As Integer
     Dim n                               As Integer
     Dim SameLamEdge                     As Boolean
-    Dim RetVal                          As Long
+    Dim retval                          As Long
     
     ''Get Part1 Data
     'Debug.Print ""
@@ -221,7 +221,7 @@ Sub CombineParts(Model1 As String, Model2 As String)
     'Rest CanCoincide
     CanCoincide = False
     
-    ModelName1 = FileName(Model1)
+    ModelName1 = fileName(Model1)
     Set swModel1 = swApp.OpenDoc6(Model1, 1, 0, "", longstatus, longwarnings)
     Set swPart1 = swModel1
     Set swModelDoc1 = swModel1
@@ -243,7 +243,7 @@ Sub CombineParts(Model1 As String, Model2 As String)
     ''Get Part2 Data
     'Debug.Print " Comparing:  " & FileName(Model2)
 
-    ModelName2 = FileName(Model2)
+    ModelName2 = fileName(Model2)
     Set swModel2 = swApp.OpenDoc6(Model2, 1, 0, "", longstatus, longwarnings)
     Set swPart2 = swModel2
     Set swModelDoc2 = swModel2
@@ -275,7 +275,7 @@ Sub CombineParts(Model1 As String, Model2 As String)
     Set RotMatrix = GetTransformMatrix(swBody2, swBody1)
     
     'Check if panels have the same number of laminates and edge
-    SameLamEdge = CheckProperties(swModel1, swModel2)
+    SameLamEdge = CheckProperties(swModel1, swModel2, RotMatrix)
     
     If (CanCoincide And SameLamEdge) Then
     
@@ -285,38 +285,37 @@ Sub CombineParts(Model1 As String, Model2 As String)
         'Add CombineID custom property to both parts
         Set swCustProp2 = swModelDocExt2.CustomPropertyManager("")
         
-        RetVal = swCustProp1.Add3("CombineID", swCustomInfoText, CombineID, swCustomPropertyReplaceValue)
-        RetVal = swCustProp2.Add3("CombineID", swCustomInfoText, CombineID, swCustomPropertyReplaceValue)
+        retval = swCustProp1.Add3("CombineID", swCustomInfoText, CombineID, swCustomPropertyReplaceValue)
+        retval = swCustProp2.Add3("CombineID", swCustomInfoText, CombineID, swCustomPropertyReplaceValue)
         
         
-        'Determine if compared body was flipped
-        Set swFace = SelectLargestFace(swBody2)
-        
-        FaceNormal = swFace.Normal
-        'Debug.Print "Largest Face Normal Vector = (" & FaceNormal(0) & ", " & FaceNormal(1) & ", " & FaceNormal(2) & ")"
-        
-        'Multiply face vector and rotation matrix to determine if body was flipped
-        Dim swMath As SldWorks.MathUtility
-        Dim RotatedVector As MathVector
-        
-        Set swMath = swApp.GetMathUtility
-        Set RotatedVector = swMath.CreateVector(FaceNormal)
-        Debug.Print "FLIPPED Panel"
+'        'Determine if compared body was flipped
+'        Set swFace = SelectLargestFace(swBody2)
+'
+'        FaceNormal = swFace.Normal
+'        'Debug.Print "Largest Face Normal Vector = (" & FaceNormal(0) & ", " & FaceNormal(1) & ", " & FaceNormal(2) & ")"
             
-       
+        
+               
         'Flag models as dirty
         swPart1.SetSaveFlag
         swPart2.SetSaveFlag
         'Debug.Print " is it Dirty? " & swPart1.GetSaveFlag
         'Debug.Print " is it Dirty? " & swPart2.GetSaveFlag
         
+        Debug.Print ""
+        Debug.Print " CombineID " & CombineID & ": TRUE"
+        Debug.Print "------------------------------------"
         
+    ElseIf CanCoincide And SameLamEdge = False Then
+        Debug.Print " Combine ID : False - Different Edgebands and Laminates"
+        Debug.Print "------------------------------------"
         
     End If
             
 End Sub
 
-Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.ModelDoc2) As Boolean
+Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.ModelDoc2, RotMatrix As SldWorks.MathTransform) As Boolean
 
     Dim config1             As SldWorks.Configuration
     Dim config2             As SldWorks.Configuration
@@ -326,7 +325,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     Dim lRetVal2            As Long
     Dim nNbrProps1          As Long
     Dim nNbrProps2          As Long
-    Dim j                   As Integer
+    Dim i                   As Integer
     
     Dim vPropNames1         As Variant
     Dim vPropTypes1         As Variant
@@ -352,8 +351,18 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     Dim NumofEdgebands2     As Integer
     Dim NumofLaminates1     As Integer
     Dim NumofLaminates2     As Integer
-
-    Dim i                   As Integer
+    
+    Dim TopLam1             As String
+    Dim BottomLam1          As String
+    Dim FrontEB1            As String
+    Dim BackEB1             As String
+    Dim LeftEB1             As String
+    Dim RightEB1            As String
+    
+    FrontEB1 = "SWOODCP_EdgeFrontMaterial"
+    BackEB1 = "SWOODCP_EdgeBacktMaterial"
+    LeftEB1 = "SWOODCP_EdgeLeftMaterial"
+    RightEB1 = "SWOODCP_EdgeRightMaterial"
     
     Set config1 = swModel1.GetActiveConfiguration
     Set config2 = swModel2.GetActiveConfiguration
@@ -368,25 +377,27 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     lRetVal1 = cusPropMgr1.GetAll3(vPropNames1, vPropTypes1, vPropValues1, resolved1, linkProp1)
     lRetVal2 = cusPropMgr2.GetAll3(vPropNames2, vPropTypes2, vPropValues2, resolved2, linkProp2)
 
-    ' For each custom property, print its name, type, and evaluated value
-    For j = 0 To nNbrProps1 - 1
-        'Debug.Print "    Name1: " & vPropNames1(j) & " Value1: " & vPropValues1(j)
+    'Check for edgebands
+    For i = 0 To nNbrProps1 - 1
+        'Debug.Print "    Name1: " & vPropNames1(i) & " Value1: " & vPropValues1(i)
 
-        If InStr(vPropValues1(j), "Edgeband") > 0 Then
+        If InStr(vPropValues1(i), "Edgeband") > 0 Then
             NumofEdgebands1 = NumofEdgebands1 + 1
         End If
         
-    Next j
-      
-    For j = 0 To nNbrProps2 - 1
-        'Debug.Print "    Name2: " & vPropNames2(j) & " Value2: " & vPropValues2(j)
+    Next i
 
-        If InStr(vPropValues2(j), "Edgeband") > 0 Then
+    'Check for edgebands
+    For i = 0 To nNbrProps2 - 1
+        'Debug.Print "    Name2: " & vPropNames2(i) & " Value2: " & vPropValues2(i)
+
+        If InStr(vPropValues2(i), "Edgeband") > 0 Then
             NumofEdgebands2 = NumofEdgebands2 + 1
         End If
 
-    Next j
+    Next i
     
+    'Check for Laminates
     If cusPropMgr1.Get("SWOODCP_TopStockMaterial") <> "" Then
         NumofLaminates1 = NumofLaminates1 + 1
     End If
@@ -413,6 +424,54 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     End If
     
     'Debug.Print "CheckProperties result: " & CheckProperties
+    
+    'Check if panel was flipped or rotated
+    Debug.Print ""
+    
+    If Round(RotMatrix.ArrayData(8), 5) = 1 Then
+    
+        Debug.Print " Panel not Flipped"
+        
+        If RotMatrix.ArrayData(0) = 1 And RotMatrix.ArrayData(4) = 1 Then
+            Debug.Print " Panel not Rotated"
+        End If
+        
+        If Round(RotMatrix.ArrayData(0), 5) = -1 And Round(RotMatrix.ArrayData(4), 5) = -1 Then
+            Debug.Print " Front => Back"
+            Debug.Print " Right => Left"
+        End If
+        
+        If Round(RotMatrix.ArrayData(1), 5) = 1 And Round(RotMatrix.ArrayData(3), 5) = -1 Then
+            Debug.Print " Front => Left"
+            Debug.Print " Back => Right"
+        End If
+        
+        If Round(RotMatrix.ArrayData(1), 5) = -1 And Round(RotMatrix.ArrayData(3), 5) = 1 Then
+            Debug.Print " Front => Right"
+            Debug.Print " Back => Left"
+        End If
+    
+    ElseIf Round(RotMatrix.ArrayData(8), 5) = -1 Then
+        Debug.Print " Top => Bottom"
+        
+        If Round(RotMatrix.ArrayData(1), 5) = -1 And Round(RotMatrix.ArrayData(3), 5) = -1 Then
+            Debug.Print " Front => Right"
+            Debug.Print " Back => Left"
+        End If
+        
+        If Round(RotMatrix.ArrayData(1), 5) = 1 And Round(RotMatrix.ArrayData(3), 5) = 1 Then
+            Debug.Print " Front => Left"
+            Debug.Print " Back => Right"
+        End If
+        
+        If Round(RotMatrix.ArrayData(0), 5) = 1 And Round(RotMatrix.ArrayData(4), 5) = -1 Then
+            Debug.Print " Front => Back"
+        End If
+        
+        If Round(RotMatrix.ArrayData(0), 5) = -1 And Round(RotMatrix.ArrayData(4), 5) = 1 Then
+            Debug.Print " Right => Left"
+        End If
+    End If
            
 End Function
 
@@ -511,6 +570,9 @@ Function GetTransformMatrix(swThisBody As SldWorks.Body2, swOtherBody As SldWork
             
             'Angles calculator
             'https://www.andre-gaschler.com/rotationconverter/
+            'https://www.continuummechanics.org/transformmatrix.html
+            'https://www.gregslabaugh.net/publications/euler.pdf
+            
             vXfm = swTransform.ArrayData
             
             'Calculate Determinant
@@ -518,21 +580,25 @@ Function GetTransformMatrix(swThisBody As SldWorks.Body2, swOtherBody As SldWork
             'Debug.Print "Determinant: " & Determinant
             'Debug.Print ""
 
-            'Debug.Print "Rotation:"
-            'Debug.Print vbTab & Round(vXfm(0), 4), Round(vXfm(1), 4), Round(vXfm(2), 4)
-            'Debug.Print vbTab & Round(vXfm(3), 4), Round(vXfm(4), 4), Round(vXfm(5), 4)
-            'Debug.Print vbTab & Round(vXfm(6), 4), Round(vXfm(7), 4), Round(vXfm(8), 4)
+            Debug.Print "Rotation:"
+            Debug.Print vbTab & Round(vXfm(0), 6), Round(vXfm(1), 6), Round(vXfm(2), 6)
+            Debug.Print vbTab & Round(vXfm(3), 6), Round(vXfm(4), 6), Round(vXfm(5), 6)
+            Debug.Print vbTab & Round(vXfm(6), 6), Round(vXfm(7), 6), Round(vXfm(8), 6)
             'Debug.Print "Translation:"
             'Debug.Print vbTab & Round(vXfm(9), 4), Round(vXfm(10), 4), Round(vXfm(11), 4)
             'Debug.Print "Scaling: " & vXfm(12)
             
             If Determinant = -1 Then
                 Debug.Print " Mirror     : " & ModelName1
+                Debug.Print "------------------------------------"
             ElseIf vXfm(12) = 1 Then 'Check if scale is 1
                 Debug.Print " CombineID " & CombineID & ": " & ModelName1
                 CanCoincide = True
             End If
-            Debug.Print "------------------------------------"
+            
+            'Find Angles
+            FindAngles swTransform
+            
             
         End If
          
@@ -617,16 +683,16 @@ Function SelectLargestFace(swBody As SldWorks.Body2) As SldWorks.Entity
 End Function
 
 
-Function FileName(File As String) As String
+Function fileName(File As String) As String
 
     Dim FullFileName As String
     
     FullFileName = Right(File, Len(File) - InStrRev(File, "\"))
 
     If Right(FullFileName, 7) = ".sldasm" Or Right(FullFileName, 7) = ".sldprt" Then
-        FileName = Left(FullFileName, Len(FullFileName) - 7)
+        fileName = Left(FullFileName, Len(FullFileName) - 7)
     Else
-        FileName = FullFileName
+        fileName = FullFileName
     End If
 
 End Function
@@ -639,13 +705,13 @@ Function NamePath(Name As String) As String
 End Function
 
 
-Function UpdateBar(Maxiter As Integer, ByVal Caption As String)
+Function UpdateBar(Maxiter As Integer, ByVal caption As String)
 
     Dim CurrentProgress     As Double
     Dim BarWidth            As Double
     Dim ProgressPercentage  As Double
         
-    If Caption = "Rebuilding..." Then
+    If caption = "Rebuilding..." Then
         Progress = Progress - 1
         ProgressBar.Bar.BackColor = &HC000&
     End If
@@ -658,9 +724,9 @@ Function UpdateBar(Maxiter As Integer, ByVal Caption As String)
     BarWidth = ProgressBar.Frame.Width * CurrentProgress
     ProgressPercentage = Round(CurrentProgress * 100, 0)
     ProgressBar.Bar.Width = BarWidth - 0.015 * BarWidth
-    ProgressBar.Text2.Caption = ProgressPercentage & "% Complete"
-    ProgressBar.Text.Caption = Progress & " of " & Maxiter
-    ProgressBar.Text3.Caption = Caption
+    ProgressBar.Text2.caption = ProgressPercentage & "% Complete"
+    ProgressBar.Text.caption = Progress & " of " & Maxiter
+    ProgressBar.Text3.caption = caption
     
     'If user uses stop button
     DoEvents
@@ -672,6 +738,101 @@ Function UpdateBar(Maxiter As Integer, ByVal Caption As String)
         ProgressBar.Image1.Visible = True
         ProgressBar.Image2.Visible = False
     End If
+
+End Function
+
+Function FindAngles2(Matrix As SldWorks.MathTransform) As Long
+
+    Dim vM As Variant
+    Dim X As Double
+    Dim Y As Double
+    Dim Z As Double
+    Dim pi As Double
+    
+    pi = 4 * Atn(1)
+    vM = Matrix.ArrayData
+    X = vM(8)
+    'X = Arccos(-1)
+    X = Arccos(Round(vM(8), 5)) ' value rounded or may cause error
+    X = Round(X * 180 / pi, 3)
+    Debug.Print "Angle X: " & X
+    
+    If vM(2) = 0 Then
+        vM(2) = 1
+    End If
+    
+    Y = Atn(vM(5) / vM(2))
+    Y = Round(Y * 180 / pi, 3)
+    Debug.Print "Angle Y: " & Y
+    
+    Y = Arcsin(vM(3))
+    Y = Round(Y * 180 / pi, 3)
+    Debug.Print "Angle Y: " & Y
+    
+    
+     If vM(6) = 0 Then
+        vM(6) = 1
+    End If
+    Z = Atn(vM(7) / (-vM(6)))
+    Z = Round(Z * 180 / pi, 3)
+    Debug.Print "Angle Z: " & Z
+
+
+End Function
+
+
+Function FindAngles(Matrix As SldWorks.MathTransform) As Long
+
+    Dim vM As Variant
+    Dim X1 As Double
+    Dim Y1 As Double
+    Dim Z1 As Double
+    Dim X2 As Double
+    Dim Y2 As Double
+    Dim Z2 As Double
+    Dim pi As Double
+    
+    pi = 4 * Atn(1)
+    vM = Matrix.ArrayData
+    
+    If (vM(6) <> 1 Or vM(6) <> -1) Then
+   
+    Y1 = -Arcsin(vM(6))
+    X1 = Atn((vM(7) / Cos(Y1)) / (vM(8) / Cos(Y1)))
+    Z1 = Atn((vM(3) / Cos(Y1)) / (vM(0) / Cos(Y1)))
+    
+    Y2 = pi - Y1
+    X2 = Atn((vM(7) / Cos(Y2)) / (vM(8) / Cos(Y2)))
+    Z2 = Atn((vM(3) / Cos(Y2)) / (vM(0) / Cos(Y2)))
+    
+    'Debug.Print "Cos(Y1): " & Cos(Y1)
+    
+  
+    Else
+        Z1 = 0
+        
+        If vM(6) = 1 Then
+            Y1 = pi / 2
+            X1 = Z1 + Atn(vM(1) / vM(2))
+        Else
+            Y1 = -pi / 2
+            X1 = -Z1 + Atn((-vM(1)) / (-vM(2)))
+        End If
+    
+    End If
+    
+'    Debug.Print ""
+'    Debug.Print " Euler Angles"
+'    Debug.Print " Angle X1: " & Round(X1 * 180 / pi, 2)
+'    Debug.Print " Angle Y1: " & Round(Y1 * 180 / pi, 2)
+'    Debug.Print " Angle Z1: " & Round(Z1 * 180 / pi, 2)
+'    Debug.Print ""
+'
+'    Debug.Print " Euler Angles 2"
+'    Debug.Print " Angle X2: " & Round(X2 * 180 / pi, 2)
+'    Debug.Print " Angle Y2: " & Round(Y2 * 180 / pi, 2)
+'    Debug.Print " Angle Z2: " & Round(Z2 * 180 / pi, 2)
+'    Debug.Print ""
 
 End Function
 
