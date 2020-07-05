@@ -233,6 +233,8 @@ Sub CombineParts(Model1 As String, Model2 As String)
     Dim swModelDoc2                     As SldWorks.ModelDoc2
     Dim swCustProp1                     As CustomPropertyManager
     Dim swCustProp2                     As CustomPropertyManager
+    Dim ConfigPropMgr1                     As SldWorks.CustomPropertyManager
+    Dim ConfigPropMgr2                     As SldWorks.CustomPropertyManager
     Dim Material1                       As String
     Dim Material2                       As String
     Dim vBodies1                        As Variant
@@ -263,9 +265,18 @@ Sub CombineParts(Model1 As String, Model2 As String)
     Set swPart1 = swModel1
     Set swModelDoc1 = swModel1
     Set swModelDocExt1 = swModelDoc1.Extension
+    Set ConfigPropMgr1 = swModel1.GetActiveConfiguration.CustomPropertyManager
     Material1 = swModelDoc1.MaterialIdName
     'Debug.Print "Material:  " & swModelDoc1.MaterialIdName
     Set swCustProp1 = swModelDocExt1.CustomPropertyManager("")
+    
+    ' Check if Part1 has GrainVertical selected and skip
+    If ConfigPropMgr1.Get("SWOODCP_PanelGrainVertical") = "1" Then
+        ErrorMessages = ErrorMessages + 1
+        Debug.Print "-----------" & ModelName1 & " has grain vertical option checked and was skipped -----------"
+        fileStream.WriteLine "-----------" & ModelName1 & " has grain vertical option checked and was skipped -----------"
+        Exit Sub
+    End If
 
     ' Get Part2 Data
     'Debug.Print " Comparing:  " & FileName(Model2)
@@ -275,6 +286,7 @@ Sub CombineParts(Model1 As String, Model2 As String)
     Set swPart2 = swModel2
     Set swModelDoc2 = swModel2
     Set swModelDocExt2 = swModelDoc2.Extension
+    Set ConfigPropMgr2 = swModel2.GetActiveConfiguration.CustomPropertyManager
     Material2 = swModelDoc2.MaterialIdName
     'Debug.Print "Material:  " & swModelDoc2.MaterialIdName
     Set swCustProp2 = swModelDocExt2.CustomPropertyManager("")
@@ -282,6 +294,14 @@ Sub CombineParts(Model1 As String, Model2 As String)
     ' Check if Part2 already has CombineID and skip
     If swCustProp2.Get("CombineID") <> "" Then
         'Debug.Print ModelName2 & ": Already has CombineID and will not be checked"
+        Exit Sub
+    End If
+    
+    ' Check if Part2 has GrainVertical selected and skip
+    If ConfigPropMgr2.Get("SWOODCP_PanelGrainVertical") = "1" Then
+        ErrorMessages = ErrorMessages + 1
+        Debug.Print "-----------" & ModelName2 & " has grain vertical option checked and has been skipped -----------"
+        fileStream.WriteLine "-----------" & ModelName2 & " has grain vertical option checked and has been skipped -----------"
         Exit Sub
     End If
 
@@ -426,16 +446,16 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
 
 
    If cusPropMgr1.Get("SWOODCP_Ext_Top_MyGrain") = "" Then
-        Top1 = Array(cusPropMgr1.Get("SWOODCP_TopStockMaterial"), cusPropMgr1.Get("SWOODCP_TopStockThickness"), "", false)
+        Top1 = Array(cusPropMgr1.Get("SWOODCP_TopStockMaterial"), cusPropMgr1.Get("SWOODCP_TopStockThickness"), "", False)
    Else
         Top1 = Array(cusPropMgr1.Get("SWOODCP_TopStockMaterial"), cusPropMgr1.Get("SWOODCP_TopStockThickness"), CDbl(cusPropMgr1.Get("SWOODCP_TopStockGrainAngleInFrontView")), CBool(cusPropMgr1.Get("SWOODCP_Ext_Top_MyGrain")))
    End If
 
-   if cusPropMgr1.Get("SWOODCP_Ext_Bottom_MyGrain") = "" then
-        Bottom1 = Array(cusPropMgr1.Get("SWOODCP_BottomStockMaterial"), cusPropMgr1.Get("SWOODCP_BottomStockThickness"), "", false)
+   If cusPropMgr1.Get("SWOODCP_Ext_Bottom_MyGrain") = "" Then
+        Bottom1 = Array(cusPropMgr1.Get("SWOODCP_BottomStockMaterial"), cusPropMgr1.Get("SWOODCP_BottomStockThickness"), "", False)
    Else
         Bottom1 = Array(cusPropMgr1.Get("SWOODCP_BottomStockMaterial"), cusPropMgr1.Get("SWOODCP_BottomStockThickness"), CDbl(cusPropMgr1.Get("SWOODCP_BottomStockGrainAngleInFrontView")), CBool(cusPropMgr1.Get("SWOODCP_Ext_Bottom_MyGrain")))
-   end If
+   End If
    
    Front1 = Array(cusPropMgr1.Get("SWOODCP_EdgeFrontMaterial"), cusPropMgr1.Get("SWOODCP_EdgeFrontThickness"))
    Back1 = Array(cusPropMgr1.Get("SWOODCP_EdgeBackMaterial"), cusPropMgr1.Get("SWOODCP_EdgeBackThickness"))
@@ -479,16 +499,16 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     End If
     
     If cusPropMgr2.Get("SWOODCP_Ext_Top_MyGrain") = "" Then
-        Top2 = Array(cusPropMgr2.Get("SWOODCP_TopStockMaterial"), cusPropMgr2.Get("SWOODCP_TopStockThickness"), "", false)
+        Top2 = Array(cusPropMgr2.Get("SWOODCP_TopStockMaterial"), cusPropMgr2.Get("SWOODCP_TopStockThickness"), "", False)
    Else
         Top2 = Array(cusPropMgr2.Get("SWOODCP_TopStockMaterial"), cusPropMgr2.Get("SWOODCP_TopStockThickness"), CDbl(cusPropMgr2.Get("SWOODCP_TopStockGrainAngleInFrontView")), CBool(cusPropMgr2.Get("SWOODCP_Ext_Top_MyGrain")))
    End If
 
-   if cusPropMgr2.Get("SWOODCP_Ext_Bottom_MyGrain") = "" then
-        Bottom2 = Array(cusPropMgr2.Get("SWOODCP_BottomStockMaterial"), cusPropMgr2.Get("SWOODCP_BottomStockThickness"), "", false)
+   If cusPropMgr2.Get("SWOODCP_Ext_Bottom_MyGrain") = "" Then
+        Bottom2 = Array(cusPropMgr2.Get("SWOODCP_BottomStockMaterial"), cusPropMgr2.Get("SWOODCP_BottomStockThickness"), "", False)
    Else
         Bottom2 = Array(cusPropMgr2.Get("SWOODCP_BottomStockMaterial"), cusPropMgr2.Get("SWOODCP_BottomStockThickness"), CDbl(cusPropMgr2.Get("SWOODCP_BottomStockGrainAngleInFrontView")), CBool(cusPropMgr2.Get("SWOODCP_Ext_Bottom_MyGrain")))
-   end If
+   End If
    Front2 = Array(cusPropMgr2.Get("SWOODCP_EdgeFrontMaterial"), cusPropMgr2.Get("SWOODCP_EdgeFrontThickness"))
    Back2 = Array(cusPropMgr2.Get("SWOODCP_EdgeBackMaterial"), cusPropMgr2.Get("SWOODCP_EdgeBackThickness"))
    Left2 = Array(cusPropMgr2.Get("SWOODCP_EdgeLeftMaterial"), cusPropMgr2.Get("SWOODCP_EdgeLeftThickness"))
@@ -571,7 +591,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     
     If SymmetryType = "Unique" Then
                 
-        CheckProperties = CheckRotation(RotMatrix, GrainAngle1, GrainAngle2, NumofEdgebands1, NumofLaminates1 , Top1, Top2, Bottom1, Bottom2, Front1, Front2, Back1, Back2, Left1, Left2, Right1, Right2)
+        CheckProperties = CheckRotation(RotMatrix, GrainAngle1, GrainAngle2, NumofEdgebands1, NumofLaminates1, Top1, Top2, Bottom1, Bottom2, Front1, Front2, Back1, Back2, Left1, Left2, Right1, Right2)
    
         If CheckProperties Then Exit Function
         
@@ -579,7 +599,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     
     If SymmetryType = "Rotatable" Then
     
-        CheckProperties = CheckRotation(RotMatrix, GrainAngle1, GrainAngle2, NumofEdgebands1, NumofLaminates1 , Top1, Top2, Bottom1, Bottom2, Front1, Front2, Back1, Back2, Left1, Left2, Right1, Right2)
+        CheckProperties = CheckRotation(RotMatrix, GrainAngle1, GrainAngle2, NumofEdgebands1, NumofLaminates1, Top1, Top2, Bottom1, Bottom2, Front1, Front2, Back1, Back2, Left1, Left2, Right1, Right2)
         'Debug.Print " Check 1"
         If CheckProperties Then Exit Function
         
@@ -598,7 +618,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     
     If SymmetryType = "Rotatable and Flippable" Then
     
-        CheckProperties = CheckRotation(RotMatrix, GrainAngle1, GrainAngle2, NumofEdgebands1, NumofLaminates1 , Top1, Top2, Bottom1, Bottom2, Front1, Front2, Back1, Back2, Left1, Left2, Right1, Right2)
+        CheckProperties = CheckRotation(RotMatrix, GrainAngle1, GrainAngle2, NumofEdgebands1, NumofLaminates1, Top1, Top2, Bottom1, Bottom2, Front1, Front2, Back1, Back2, Left1, Left2, Right1, Right2)
         'Debug.Print " Check 1"
         If CheckProperties Then Exit Function
         
@@ -637,7 +657,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     
     If SymmetryType = "Fully Symmetric" Then
     
-        CheckProperties = CheckRotation(RotMatrix, GrainAngle1, GrainAngle2, NumofEdgebands1, NumofLaminates1 , Top1, Top2, Bottom1, Bottom2, Front1, Front2, Back1, Back2, Left1, Left2, Right1, Right2)
+        CheckProperties = CheckRotation(RotMatrix, GrainAngle1, GrainAngle2, NumofEdgebands1, NumofLaminates1, Top1, Top2, Bottom1, Bottom2, Front1, Front2, Back1, Back2, Left1, Left2, Right1, Right2)
         'Debug.Print " Check 1"
         If CheckProperties Then Exit Function
         
@@ -737,7 +757,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Debug.Print " Front => Front, Back => Back, Right => Right, Left => Left"
 
             'Check Panel grain angle
-            If Not (GrainAngle1(1)) Then
+            If (GrainAngle1(1) And GrainAngle2(1)) Then
                 If Not (GrainAngle1(0) = GrainAngle2(0)) Then
                     ' Debug.Print "Different panel grain angle"
                     DifferentGrain = True
@@ -747,17 +767,17 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             End If
 
             ' Check Laminates
-            if NumofLaminates1 > 0 then
+            If NumofLaminates1 > 0 Then
                 If Not (Compare(Top1, Top2) And Compare(Bottom1, Bottom2)) Then
                     ' Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
                 End If
-            end if
+            End If
             
             ' Check Edgebands
-            if NumofEdgebands1 > 0 then
+            If NumofEdgebands1 > 0 Then
                 If Compare(Front1, Front2) And Compare(Back1, Back2) And Compare(Right1, Right2) And Compare(Left1, Left2) Then
                     CheckRotation = True
                     Exit Function
@@ -765,9 +785,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     ' Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
-            else 
-                CheckRotation = true
-            end if
+            Else
+                CheckRotation = True
+            End If
             
         End If
         
@@ -776,7 +796,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Debug.Print " Front => Back, Back => Front, Right => Left, Left => Right"
 
             'Check Panel grain angle
-            If Not (GrainAngle1(1)) Then
+            If (GrainAngle1(1) And GrainAngle2(1)) Then
                 If Not (GrainAngle1(0) = GrainAngle2(0)) Then
                     ' Debug.Print "Different panel grain angle"
                     DifferentGrain = True
@@ -786,17 +806,17 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             End If
 
             ' Check Laminates
-            if NumofLaminates1 > 0 then
+            If NumofLaminates1 > 0 Then
                 If Not (Compare(Top1, Top2) And Compare(Bottom1, Bottom2)) Then
                     ' Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
                 End If
-            end if
+            End If
             
             ' Check Edgebands
-            if NumofEdgebands1 > 0 then
+            If NumofEdgebands1 > 0 Then
                 If Compare(Front1, Back2) And Compare(Back1, Front2) And Compare(Right1, Left2) And Compare(Left1, Right2) Then
                     CheckRotation = True
                     Exit Function
@@ -804,9 +824,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     ' Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
-            else 
-                CheckRotation = true
-            end if
+            Else
+                CheckRotation = True
+            End If
 
         End If
         
@@ -815,8 +835,12 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Debug.Print " Front => Right, Back => Left, Right => Back, Left => Front"
             
             'Check Panel grain angle
-            If Not (GrainAngle1(1)) Then
+            If (GrainAngle1(1) And GrainAngle2(1)) Then
                 GrainAngle1Rotated = GrainAngle1(0) + 90
+
+                If GrainAngle1Rotated = 180 Then
+                    GrainAngle1Rotated = 0
+                End If
 
                 If Not (GrainAngle1Rotated = GrainAngle2(0)) Then
                     ' Debug.Print "Different panel grain angle"
@@ -827,7 +851,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             End If
 
             ' Check Laminates
-            if NumofLaminates1 > 0 then
+            If NumofLaminates1 > 0 Then
                 Top1Rotated = Top1
                 Bottom1Rotated = Bottom1
 
@@ -848,19 +872,19 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     CheckRotation = False
                     Exit Function
                 End If
-            end if
+            End If
             
             ' Chekch Edgebands
-            if NumofEdgebands1 > 0 then
+            If NumofEdgebands1 > 0 Then
                 If Compare(Front1, Right2) And Compare(Back1, Left2) And Compare(Right1, Back2) And Compare(Left1, Front2) Then
                     CheckRotation = True
                     Exit Function
                 Else
                     DifferentEB = True
                 End If
-            else 
-                CheckRotation = true
-            end if
+            Else
+                CheckRotation = True
+            End If
 
         End If
         
@@ -869,8 +893,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Debug.Print " Front => Left, Back => Right, Right => Front, Left => Back"
 
             'Check Panel grain angle
-            If Not (GrainAngle1(1)) Then
+            If (GrainAngle1(1) And GrainAngle2(1)) Then
                 GrainAngle1Rotated = GrainAngle1(0) + 90
+
                 If GrainAngle1Rotated = 180 Then
                     GrainAngle1Rotated = 0
                 End If
@@ -884,7 +909,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             End If
 
             ' Check Laminates
-            if NumofLaminates1 > 0 then
+            If NumofLaminates1 > 0 Then
                 Top1Rotated = Top1
                 Bottom1Rotated = Bottom1
 
@@ -905,19 +930,19 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     CheckRotation = False
                     Exit Function
                 End If
-            end if
+            End If
                 
             ' Check Edgebands
-            if NumofEdgebands1 > 0 then
+            If NumofEdgebands1 > 0 Then
                 If Compare(Front1, Left2) And Compare(Back1, Right2) And Compare(Right1, Front2) And Compare(Left1, Back2) Then
                     CheckRotation = True
                     Exit Function
                 Else
                     DifferentEB = True
                 End If
-            else 
-                CheckRotation = true
-            end if
+            Else
+                CheckRotation = True
+            End If
 
         End If
     
@@ -930,8 +955,8 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Debug.Print " Front => Right, Back => Left, Right => Front, Left => Back "
 
             'Check Panel grain angle
-            If Not (GrainAngle1(1)) Then
-                GrainAngle1Rotated = GrainAngle1(0) - 90
+            If (GrainAngle1(1) And GrainAngle2(1)) Then
+                GrainAngle1Rotated = Abs(GrainAngle1(0) - 90)
 
                 If Not (GrainAngle1Rotated = GrainAngle2(0)) Then
                     ' Debug.Print "Different panel grain angle"
@@ -942,7 +967,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             End If
             
             ' Check Laminates
-            if NumofLaminates1 > 0 then
+            If NumofLaminates1 > 0 Then
                 Top1Rotated = Top1
                 Bottom1Rotated = Bottom1
 
@@ -955,10 +980,10 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     CheckRotation = False
                     Exit Function
                 End If
-            end if
+            End If
             
             ' Check Edgebands
-            if NumofEdgebands1 > 0 then
+            If NumofEdgebands1 > 0 Then
                 If Compare(Front1, Right2) And Compare(Back1, Left2) And Compare(Right1, Front2) And Compare(Left1, Back2) Then
                     CheckRotation = True
                     Exit Function
@@ -966,9 +991,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     ' Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
-            else 
-                CheckRotation = true
-            end if           
+            Else
+                CheckRotation = True
+            End If
             
         End If
         
@@ -977,8 +1002,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Debug.Print " Front => Left, Back => Right, Right => Back, Left => Front"
             
             'Check Panel grain angle
-            If Not (GrainAngle1(1)) Then
+            If (GrainAngle1(1) And GrainAngle2(1)) Then
                 GrainAngle1Rotated = GrainAngle1(0) + 90
+                
                 If GrainAngle1Rotated = 180 Then
                     GrainAngle1Rotated = 0
                 End If
@@ -992,7 +1018,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             End If
             
             ' Check Laminates
-            if NumofLaminates1 > 0 then
+            If NumofLaminates1 > 0 Then
                 Top1Rotated = Top1
                 Bottom1Rotated = Bottom1
 
@@ -1013,10 +1039,10 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     CheckRotation = False
                     Exit Function
                 End If
-            end if
+            End If
 
             ' Check Edgebands
-            if NumofEdgebands1 > 0 then
+            If NumofEdgebands1 > 0 Then
                 If Compare(Front1, Left2) And Compare(Back1, Right2) And Compare(Right1, Back2) And Compare(Left1, Front2) Then
                     CheckRotation = True
                     Exit Function
@@ -1024,9 +1050,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     ' Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
-            else 
-                CheckRotation = true
-            end if
+            Else
+                CheckRotation = True
+            End If
 
         End If
         
@@ -1035,7 +1061,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Debug.Print " Front => Back, Back => Front, Right => Right, Left => Left"
 
             'Check Panel grain angle
-            If Not (GrainAngle1(1)) Then
+            If (GrainAngle1(1) And GrainAngle2(1)) Then
                 If Not (GrainAngle1(0) = GrainAngle2(0)) Then
                     ' Debug.Print "Different panel grain angle"
                     DifferentGrain = True
@@ -1045,17 +1071,17 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             End If
             
             ' Check Laminates
-            if NumofLaminates1 > 0 then
+            If NumofLaminates1 > 0 Then
                 If Not (Compare(Top1, Bottom2) And Compare(Bottom1, Top2)) Then
                     ' Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
                 End If
-            end if
+            End If
 
             ' Check Edgebands
-            if NumofEdgebands1 > 0 then
+            If NumofEdgebands1 > 0 Then
                 If Compare(Front1, Back2) And Compare(Back1, Front2) And Compare(Right1, Right2) And Compare(Left1, Left2) Then
                     CheckRotation = True
                     Exit Function
@@ -1063,9 +1089,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     ' Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
-            else 
-                CheckRotation = true
-            end if
+            Else
+                CheckRotation = True
+            End If
 
         End If
         
@@ -1074,7 +1100,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Debug.Print " Front => Front, Back => Back, Right => Left, Left => Right"
 
             'Check Panel grain angle
-            If Not (GrainAngle1(1)) Then
+            If (GrainAngle1(1) And GrainAngle2(1)) Then
                 If Not (GrainAngle1(0) = GrainAngle2(0)) Then
                     CheckRotation = False
                     ' Debug.Print "Different panel grain angle"
@@ -1084,17 +1110,17 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             End If
 
             ' Check Laminates
-            if NumofLaminates1 > 0 then
+            If NumofLaminates1 > 0 Then
                 If Not (Compare(Top1, Bottom2) And Compare(Bottom1, Top2)) Then
                     ' Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
                 End If
-            end if
+            End If
 
             ' Check Edgebands
-            if NumofEdgebands1 > 0 then
+            If NumofEdgebands1 > 0 Then
                 If Compare(Front1, Front2) And Compare(Back1, Back2) And Compare(Right1, Left2) And Compare(Left1, Right2) Then
                     CheckRotation = True
                     Exit Function
@@ -1102,9 +1128,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                     ' Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
-            else 
-                CheckRotation = true
-            end if
+            Else
+                CheckRotation = True
+            End If
 
         End If
     End If
@@ -1432,6 +1458,10 @@ Function GroupPanels(List As Variant)
     Next i
 
 End Function
+
+
+
+
 
 
 

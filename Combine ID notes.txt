@@ -7,3 +7,9 @@ Ideas
 Log shows why it was not combined
 
 how to get angle values like 180 and 270
+
+    ' Check if Part2 already has CombineID and skip
+    If swCustProp2.Get("CombineID") <> "" Then
+        'Debug.Print ModelName2 & ": Already has CombineID and will not be checked"
+        Exit Sub
+    End If
