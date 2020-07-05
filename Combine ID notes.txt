@@ -1,0 +1,9 @@
+Combine ID notes
+
+Not working if laminates dont exist
+Egbands dont work if grain angle is different than 0
+
+Ideas
+Log shows why it was not combined
+
+how to get angle values like 180 and 270
