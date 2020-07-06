@@ -1,4 +1,5 @@
 ' V0.6 takes into account grain direction
+' excludes panels with vertical grain option
 
 '####Logic
 
@@ -33,7 +34,7 @@
 Option Explicit
 Option Compare Text
 
-Dim swApp                   As SldWorks.SldWorks
+Dim SwApp                   As SldWorks.SldWorks
 Dim swModel                 As SldWorks.ModelDoc2
 Dim swPart1                 As SldWorks.PartDoc
 Dim swPart2                 As SldWorks.PartDoc
@@ -54,6 +55,8 @@ Dim PartList                As Variant
 Dim CanCoincide             As Boolean
 Dim UserName                As String
 Dim ErrorMessages           As Integer
+Dim ExcludedGrain           As String
+Dim ExcludedView            As String
 
 Dim CurrentProgress         As Double
 Dim BarWidth                As Long
@@ -64,11 +67,16 @@ Dim CancelButton            As Boolean
 Dim DifferentGrain          As Boolean
 Dim DifferentLam            As Boolean
 Dim DifferentEB             As Boolean
+Dim FrontView               As Variant
 
-Sub main()
+
+Sub Main()
 
     ErrorMessages = 0
-
+    ExcludedView = ""
+    ExcludedGrain = ""
+    FrontView = Array(1, 0, 0, 0, 1, 0, 0, 0, 1)
+    
     Debug.Print ""
     Debug.Print "----------- Macro Started -----------"
 
@@ -77,8 +85,8 @@ Sub main()
     Dim NumofParts              As Integer
     Dim NumofChecks             As Integer
 
-    Set swApp = Application.SldWorks
-    Set swModel = swApp.ActiveDoc
+    Set SwApp = Application.SldWorks
+    Set swModel = SwApp.ActiveDoc
 
     AssemblyName = FileName(swModel.GetTitle())
          
@@ -166,7 +174,7 @@ ExitCode:
 
     Call UpdateBar(UBound(PartList), "Rebuilding...")
 
-    Set swModel = swApp.ActivateDoc3(AssemblyPath, False, 1, 0)
+    Set swModel = SwApp.ActivateDoc3(AssemblyPath, False, 1, 0)
 
     ' Rebuild Assembly
     boolstatus = swModel.EditRebuild3()
@@ -186,6 +194,17 @@ ExitCode:
     ' Close log file
     fileStream.Close
     
+    If ExcludedView <> "" Or ExcludedGrain <> "" Then
+        If ExcludedGrain = "" Then
+            MsgBox "Excluded parts due to wrong view oriantation: " + vbCrLf + ExcludedView, vbExclamation, "Error"
+        ElseIf ExcludedView = "" Then
+            MsgBox "Excluded parts due to 'Grain is Vertical' checked: " + vbCrLf + ExcludedGrain, vbExclamation, "Error"
+        Else
+            MsgBox "Excluded parts due to wrong view oriantation: " + vbCrLf + ExcludedView + vbCrLf + "Excluded parts due to 'Grain is Vertical' checked: " + vbCrLf + ExcludedGrain, vbExclamation, "Excluded Parts"
+        End If
+    End If
+    
+    
     If ErrorMessages = 1 Then
         MsgBox ErrorMessages & " error occured. Review log file", vbExclamation, "Error"
     ElseIf ErrorMessages > 1 Then
@@ -198,7 +217,7 @@ ErrorHandler:
 
     Call UpdateBar(UBound(PartList), "Rebuilding...")
 
-    Set swModel = swApp.ActivateDoc3(AssemblyPath, False, 1, 0)
+    Set swModel = SwApp.ActivateDoc3(AssemblyPath, False, 1, 0)
 
     ' Rebuild Assembly
     boolstatus = swModel.EditRebuild3()
@@ -218,6 +237,8 @@ ErrorHandler:
     ' Close log file
     fileStream.Close
     
+ 
+    
     MsgBox "Error Occured while processing: " & ModelName1 & " and " & ModelName2, vbExclamation, "Error"
 
 End Sub
@@ -233,8 +254,6 @@ Sub CombineParts(Model1 As String, Model2 As String)
     Dim swModelDoc2                     As SldWorks.ModelDoc2
     Dim swCustProp1                     As CustomPropertyManager
     Dim swCustProp2                     As CustomPropertyManager
-    Dim ConfigPropMgr1                     As SldWorks.CustomPropertyManager
-    Dim ConfigPropMgr2                     As SldWorks.CustomPropertyManager
     Dim Material1                       As String
     Dim Material2                       As String
     Dim vBodies1                        As Variant
@@ -261,32 +280,22 @@ Sub CombineParts(Model1 As String, Model2 As String)
     CanCoincide = False
     
     ModelName1 = FileName(Model1)
-    Set swModel1 = swApp.OpenDoc6(Model1, 1, 0, "", longstatus, longwarnings)
+    Set swModel1 = SwApp.OpenDoc6(Model1, 1, 0, "", longstatus, longwarnings)
     Set swPart1 = swModel1
     Set swModelDoc1 = swModel1
     Set swModelDocExt1 = swModelDoc1.Extension
-    Set ConfigPropMgr1 = swModel1.GetActiveConfiguration.CustomPropertyManager
     Material1 = swModelDoc1.MaterialIdName
     'Debug.Print "Material:  " & swModelDoc1.MaterialIdName
     Set swCustProp1 = swModelDocExt1.CustomPropertyManager("")
     
-    ' Check if Part1 has GrainVertical selected and skip
-    If ConfigPropMgr1.Get("SWOODCP_PanelGrainVertical") = "1" Then
-        ErrorMessages = ErrorMessages + 1
-        Debug.Print "-----------" & ModelName1 & " has grain vertical option checked and was skipped -----------"
-        fileStream.WriteLine "-----------" & ModelName1 & " has grain vertical option checked and was skipped -----------"
-        Exit Sub
-    End If
-
     ' Get Part2 Data
     'Debug.Print " Comparing:  " & FileName(Model2)
 
     ModelName2 = FileName(Model2)
-    Set swModel2 = swApp.OpenDoc6(Model2, 1, 0, "", longstatus, longwarnings)
+    Set swModel2 = SwApp.OpenDoc6(Model2, 1, 0, "", longstatus, longwarnings)
     Set swPart2 = swModel2
     Set swModelDoc2 = swModel2
     Set swModelDocExt2 = swModelDoc2.Extension
-    Set ConfigPropMgr2 = swModel2.GetActiveConfiguration.CustomPropertyManager
     Material2 = swModelDoc2.MaterialIdName
     'Debug.Print "Material:  " & swModelDoc2.MaterialIdName
     Set swCustProp2 = swModelDocExt2.CustomPropertyManager("")
@@ -294,14 +303,6 @@ Sub CombineParts(Model1 As String, Model2 As String)
     ' Check if Part2 already has CombineID and skip
     If swCustProp2.Get("CombineID") <> "" Then
         'Debug.Print ModelName2 & ": Already has CombineID and will not be checked"
-        Exit Sub
-    End If
-    
-    ' Check if Part2 has GrainVertical selected and skip
-    If ConfigPropMgr2.Get("SWOODCP_PanelGrainVertical") = "1" Then
-        ErrorMessages = ErrorMessages + 1
-        Debug.Print "-----------" & ModelName2 & " has grain vertical option checked and has been skipped -----------"
-        fileStream.WriteLine "-----------" & ModelName2 & " has grain vertical option checked and has been skipped -----------"
         Exit Sub
     End If
 
@@ -587,7 +588,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     Dim Mdat(15)              As Double
     Dim SymmetricMatrix       As SldWorks.MathTransform
     
-    Set swMathUtil = swApp.GetMathUtility
+    Set swMathUtil = SwApp.GetMathUtility
     
     If SymmetryType = "Unique" Then
                 
@@ -1140,15 +1141,16 @@ End Function
 
 Function GetParts(Assembly As SldWorks.AssemblyDoc) As Variant
 
-    Dim swBomQuant As Object 'Key->Path, Value->Quantity
-    Dim vComps As Variant
-    Dim swComp As SldWorks.Component2
-    Dim i As Integer
-    Dim Path As String
+    Dim swBomQuant                      As Object 'Key->Path, Value->Quantity
+    Dim vComps                          As Variant
+    Dim swComp                          As SldWorks.Component2
+    Dim i                               As Integer
+    Dim j                               As Integer
+    Dim Path                            As String
     Dim swSelModel                      As SldWorks.ModelDoc2
     Dim swModelDocExt                   As ModelDocExtension
     Dim swCustProp                      As CustomPropertyManager
-
+    Dim ConfigPropMgr                   As SldWorks.CustomPropertyManager
 
     Set swBomQuant = CreateObject("Scripting.Dictionary")
 
@@ -1168,7 +1170,7 @@ Function GetParts(Assembly As SldWorks.AssemblyDoc) As Variant
           
                 Set swModelDocExt = swSelModel.Extension
                 Set swCustProp = swModelDocExt.CustomPropertyManager("")
-               
+                Set ConfigPropMgr = swSelModel.GetActiveConfiguration.CustomPropertyManager
                 'Debug.Print swSelModel.GetType
                 'Debug.Print swComp.Name
                 'Debug.Print swComp.IsSuppressed
@@ -1176,31 +1178,50 @@ Function GetParts(Assembly As SldWorks.AssemblyDoc) As Variant
                 Path = swComp.GetPathName
                 'Debug.Print Path
                 
-                    ' Delete CombineID if it exists
-                    boolstatus = swCustProp.Delete2("CombineID")
+                ' Delete CombineID if it exists
+                boolstatus = swCustProp.Delete2("CombineID")
                 
-                    ' Check if it has LxWxT properties
-                    If Not (swCustProp.Get("Length") = "" Or swCustProp.Get("Width") = "" Or swCustProp.Get("Thickness") = "") Then
-                        'Check if it's a hardware component
-                        If Not (swCustProp.Get("IS_HARDWARE") = "Yes" Or swCustProp.Get("Combine") = "No" Or InStr(Path, "\Hardwares\") <> 0) Then
-            
-                            'Debug.Print Path
-                            
-                            If swBomQuant.exists(Path) Then
-                                swBomQuant.Item(Path) = swBomQuant.Item(Path) + 1
-                            Else
-                                swBomQuant.Add Path, 1
-                            End If
+                Dim ViewData As Variant
+                ViewData = swSelModel.GetStandardViewRotation(1)
+                
+                If Not Compare(FrontView, ViewData) Then
+                     Debug.Print FileName(Path) & " has wrong view orientation"
+                     fileStream.WriteLine "  Excluded due to wrong view orientation: " & FileName(Path)
+                     ExcludedView = ExcludedView + "  " + FileName(Path) + vbCrLf
+                     GoTo NextIteration
+                End If
+
+                ' Check if Part1 has GrainVertical selected and skip
+                If ConfigPropMgr.Get("SWOODCP_PanelGrainVertical") = "1" Then
+                    Debug.Print FileName(Path) & " has 'Grain is Vertical' checked"
+                    fileStream.WriteLine "  Excluded due to 'Grain is Vertical' checked: " & FileName(Path)
+                    ExcludedGrain = ExcludedGrain + "  " + FileName(Path) + vbCrLf
+                    GoTo NextIteration
+                End If
+
+
+                ' Check if it has LxWxT properties
+                If Not (swCustProp.Get("Length") = "" Or swCustProp.Get("Width") = "" Or swCustProp.Get("Thickness") = "") Then
+                    'Check if it's a hardware component
+                    If Not (swCustProp.Get("IS_HARDWARE") = "Yes" Or swCustProp.Get("Combine") = "No" Or InStr(Path, "\Hardwares\") <> 0) Then
+        
+                        'Debug.Print Path
+                        
+                        If swBomQuant.exists(Path) Then
+                            swBomQuant.Item(Path) = swBomQuant.Item(Path) + 1
                         Else
-                            Debug.Print "Excluded Check 2: " & FileName(Path)
+                            swBomQuant.Add Path, 1
                         End If
-                    
                     Else
-                        Debug.Print "Excluded Check 1: " & FileName(Path)
+                        'Debug.Print "Excluded Check 2: " & FileName(Path)
                     End If
+                
+                Else
+                    'Debug.Print "Excluded Check 1: " & FileName(Path)
+                End If
             End If
         End If
-        
+NextIteration:
     Next
     
     Dim vItems As Variant
@@ -1445,7 +1466,7 @@ Function GroupPanels(List As Variant)
     
     For i = 0 To UBound(List)
         'Debug.Print List(i)
-        Set swModel = swApp.OpenDoc6(List(i), swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, "", errors, warnings)
+        Set swModel = SwApp.OpenDoc6(List(i), swDocumentTypes_e.swDocPART, swOpenDocOptions_e.swOpenDocOptions_Silent, "", errors, warnings)
         Set swModelDocExt = swModel.Extension
         Set swCustProp = swModelDocExt.CustomPropertyManager("")
         swCustProp.Get6 "Length", UseCached, ValOut, Length, WasResolved, LinkToProperty
@@ -1458,10 +1479,4 @@ Function GroupPanels(List As Variant)
     Next i
 
 End Function
-
-
-
-
-
-
 
