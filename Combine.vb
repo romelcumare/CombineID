@@ -5,8 +5,8 @@
 
 ' #Get all parts
 ' Delete CombineID property
-' Explude parts without depth, width and thickness property
-' exclude parts that have IS_HARDWARE and Combine property
+' Exclude parts without depth, width and thickness property
+' Exclude parts that have IS_HARDWARE and Combine property
 ' # Compare parts avoiding duplicate compares
 ' check if parts have the same material
 ' Get biggest bodies for both parts
@@ -15,7 +15,7 @@
 
 ' #CheckProperties
 ' Get number of Edgebands
-' if number of edgebands and laminates is different then exit
+' if number of Edgebands and laminates is different then exit
 
 ' Get symmetry type (Unique, Rotatable, Rotatable and Flippable, Fully Symmetric)
 ' Depending on the symmetry type, check possible rotation matrixes and run CheckRotation
@@ -196,11 +196,11 @@ ExitCode:
     fileStream.Close
     
     If ErrorMessages = 1 Then
-        MsgBox ErrorMessages & " error occured. Review log file", vbExclamation, "Error"
+        MsgBox ErrorMessages & " error occurred. Review log file", vbExclamation, "Error"
 '        Exit Sub
         GoTo EndCode
     ElseIf ErrorMessages > 1 Then
-        MsgBox ErrorMessages & " errors occured. Review log file", vbExclamation, "Error"
+        MsgBox ErrorMessages & " errors occurred. Review log file", vbExclamation, "Error"
 '        Exit Sub
         GoTo EndCode
     End If
@@ -245,7 +245,7 @@ ErrorHandler:
     
  
     
-    MsgBox "Error Occured while processing: " & ModelName1 & " and " & ModelName2, vbExclamation, "Error"
+    MsgBox "Error while processing: " & ModelName1 & " and " & ModelName2, vbExclamation, "Error"
 
 EndCode:
 
@@ -350,8 +350,8 @@ Sub CombineParts(Model1 As String, Model2 As String)
         End If
           
         If DifferentEB Then
-            Debug.Print "  Different Egebands"
-            fileStream.WriteLine "  Different Egebands: " + vbCrLf + "     " + ModelName1 + vbCrLf + "     " + ModelName2
+            Debug.Print "  Different Edgebands"
+            fileStream.WriteLine "  Different Edgebands: " + vbCrLf + "     " + ModelName1 + vbCrLf + "     " + ModelName2
         End If
 
         If DifferentCorners Then
@@ -1294,7 +1294,7 @@ Function GetParts(Assembly As SldWorks.AssemblyDoc) As Variant
         Set swComp = vComps(i)
         'Debug.Print vComps(i).Name
         
-        ' Check if suppresed and if it's part model
+        ' Check if suppressed and if it's part model
         If swComp.IsSuppressed = False Then
         
             Set swSelModel = swComp.GetModelDoc2
@@ -1560,7 +1560,7 @@ Function GetSymmetryType(Body As SldWorks.Body2) As String
     MassProps = Body.GetMassProperties(1)
     Box = Body.GetBodyBox
     
-   ' Check differece between Body CoM and Box Com
+   ' Check difference between Body CoM and Box Com
     For i = 0 To 2
         CoM(i) = MassProps(i)
         BoxCoM(i) = (Box(i + 3) + Box(i)) / 2
@@ -1625,4 +1625,3 @@ Function GroupPanels(List As Variant)
     Next i
 
 End Function
-
