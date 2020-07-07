@@ -999,6 +999,10 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     
     ElseIf Round(RotMatrix.ArrayData(8), 5) = -1 Then
         'Debug.Print " Top => Bottom"
+
+        Dim Corner2Rotated          As Variant
+
+        Corner2Rotated = Corners2
         
         If Round(RotMatrix.ArrayData(0), 5) = -1 And Round(RotMatrix.ArrayData(4), 5) = 1 Then
             ' No rotation
@@ -1028,9 +1032,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             If NumofEdgebands1 > 0 Then
 
                 ' Check Corners
-                RotateCorners Corners2
+                RotateCorners Corner2Rotated
                 
-                If Corners1(0) <> Corners2(3) Or Corners1(1) <> Corners2(2) Or Corners1(2) <> Corners2(1) Or Corners1(3) <> Corners2(0) Then
+                If Corners1(0) <> Corner2Rotated(3) Or Corners1(1) <> Corner2Rotated(2) Or Corners1(2) <> Corner2Rotated(1) Or Corners1(3) <> Corner2Rotated(0) Then
                     DifferentCorners = True
                     CheckRotation = False
                     Exit Function
@@ -1085,9 +1089,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             If NumofEdgebands1 > 0 Then
             
                 'Check Corners
-                RotateCorners Corners2
+                RotateCorners Corner2Rotated
                 
-                If Corners1(0) <> Corners2(0) Or Corners1(1) <> Corners2(3) Or Corners1(2) <> Corners2(2) Or Corners1(3) <> Corners2(1) Then
+                If Corners1(0) <> Corner2Rotated(0) Or Corners1(1) <> Corner2Rotated(3) Or Corners1(2) <> Corner2Rotated(2) Or Corners1(3) <> Corner2Rotated(1) Then
                     DifferentCorners = True
                     CheckRotation = False
                     Exit Function
@@ -1154,9 +1158,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             If NumofEdgebands1 > 0 Then
 
                 ' Check Corners
-                RotateCorners Corners2
+                RotateCorners Corner2Rotated
                 
-                If Corners1(0) <> Corners2(2) Or Corners1(1) <> Corners2(1) Or Corners1(2) <> Corners2(0) Or Corners1(3) <> Corners2(3) Then
+                If Corners1(0) <> Corner2Rotated(2) Or Corners1(1) <> Corner2Rotated(1) Or Corners1(2) <> Corner2Rotated(0) Or Corners1(3) <> Corner2Rotated(3) Then
                     DifferentCorners = True
                     CheckRotation = False
                     Exit Function
@@ -1203,9 +1207,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             If NumofEdgebands1 > 0 Then
 
                 ' Check Corners
-                RotateCorners Corners2
+                RotateCorners Corner2Rotated
                 
-                If Corners1(0) <> Corners2(1) Or Corners1(1) <> Corners2(0) Or Corners1(2) <> Corners2(3) Or Corners1(3) <> Corners2(2) Then
+                If Corners1(0) <> Corner2Rotated(1) Or Corners1(1) <> Corner2Rotated(0) Or Corners1(2) <> Corner2Rotated(3) Or Corners1(3) <> Corner2Rotated(2) Then
                     DifferentCorners = True
                     CheckRotation = False
                     Exit Function
@@ -1604,6 +1608,7 @@ Function GroupPanels(List As Variant)
     Next i
 
 End Function
+
 
 
 
