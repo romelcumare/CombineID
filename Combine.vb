@@ -331,30 +331,35 @@ Sub CombineParts(Model1 As String, Model2 As String)
     Set RotMatrix = GetTransformMatrix(swBody2, swBody1)
     
     If CanCoincide Then
+    
 '        ' Check Symmetry type
 '        SymmetryType = GetSymmetryType(swBody1)
 '        Debug.Print " Panel Type : " & SymmetryType
         
         ' Check if panels have the same number of laminates and edge
         SameLamEdge = CheckProperties(swModel1, swModel2, RotMatrix, swBody1)
-    End If
-
-    If DifferentGrain Then
-        Debug.Print "  Different Panel Grain"
-    End If
-
-    If DifferentLam Then
-        Debug.Print "  Different Laminates"
-    End If
-
-    If DifferentEB Then
-        Debug.Print "  Different Egebands"
-    End If
-
-    If DifferentCorners Then
-        Debug.Print "  Different Corners"
-    End If
     
+        If DifferentGrain Then
+            Debug.Print "  Different Panel Grain"
+            fileStream.WriteLine "  Different Panel Grain: " + vbCrLf + "     " + ModelName1 + vbCrLf + "     " + ModelName2
+        End If
+    
+        If DifferentLam Then
+            Debug.Print "  Different Laminates"
+            fileStream.WriteLine "  Different Laminates: " + vbCrLf + "     " + ModelName1 + vbCrLf + "     " + ModelName2
+        End If
+          
+        If DifferentEB Then
+            Debug.Print "  Different Egebands"
+            fileStream.WriteLine "  Different Egebands: " + vbCrLf + "     " + ModelName1 + vbCrLf + "     " + ModelName2
+        End If
+
+        If DifferentCorners Then
+            Debug.Print "  Different Corners"
+            fileStream.WriteLine "  Different Corners: " + vbCrLf + "     " + ModelName1 + vbCrLf + "     " + ModelName2
+        End If
+    
+    End If
     
     If (CanCoincide And SameLamEdge) Then
           
@@ -786,7 +791,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Check Panel grain angle
             If (GrainAngle1(1) And GrainAngle2(1)) Then
                 If Not (GrainAngle1(0) = GrainAngle2(0)) Then
-                    ' Debug.Print "Different panel grain angle"
+                    'Debug.Print "Different panel grain angle"
                     DifferentGrain = True
                     CheckRotation = False
                     Exit Function
@@ -796,7 +801,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Check Laminates
             If NumofLaminates1 > 0 Then
                 If Not (Compare(Top1, Top2) And Compare(Bottom1, Bottom2)) Then
-                    ' Debug.Print " Different Laminates"
+                    'Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
@@ -805,18 +810,20 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             
             ' Check Edgebands
             If NumofEdgebands1 > 0 Then
-                'Check Corners
-                If Corners1(0) <> Corners2(0) Or Corners1(1) <> Corners2(1) Or Corners1(2) <> Corners2(2) Or Corners1(3) <> Corners2(3) Then
-                    DifferentCorners = True
-                    CheckRotation = False
-                    Exit Function
-                End If
 
                 If Compare(Front1, Front2) And Compare(Back1, Back2) And Compare(Right1, Right2) And Compare(Left1, Left2) Then
+
+                    'Check Corners
+                    If Corners1(0) <> Corners2(0) Or Corners1(1) <> Corners2(1) Or Corners1(2) <> Corners2(2) Or Corners1(3) <> Corners2(3) Then
+                        DifferentCorners = True
+                        CheckRotation = False
+                        Exit Function
+                    End If
+
                     CheckRotation = True
                     Exit Function
                 Else
-                    ' Debug.Print " Different Edgebands"
+                    'Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
             Else
@@ -832,7 +839,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             'Check Panel grain angle
             If (GrainAngle1(1) And GrainAngle2(1)) Then
                 If Not (GrainAngle1(0) = GrainAngle2(0)) Then
-                    ' Debug.Print "Different panel grain angle"
+                    'Debug.Print "Different panel grain angle"
                     DifferentGrain = True
                     CheckRotation = False
                     Exit Function
@@ -842,7 +849,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Check Laminates
             If NumofLaminates1 > 0 Then
                 If Not (Compare(Top1, Top2) And Compare(Bottom1, Bottom2)) Then
-                    ' Debug.Print " Different Laminates"
+                    'Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
@@ -851,18 +858,20 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             
             ' Check Edgebands
             If NumofEdgebands1 > 0 Then
-                'Check Corners
-                If Corners1(0) <> Corners2(2) Or Corners1(1) <> Corners2(3) Or Corners1(2) <> Corners2(0) Or Corners1(3) <> Corners2(1) Then
-                    DifferentCorners = True
-                    CheckRotation = False
-                    Exit Function
-                End If
 
                 If Compare(Front1, Back2) And Compare(Back1, Front2) And Compare(Right1, Left2) And Compare(Left1, Right2) Then
+
+                    'Check Corners
+                    If Corners1(0) <> Corners2(2) Or Corners1(1) <> Corners2(3) Or Corners1(2) <> Corners2(0) Or Corners1(3) <> Corners2(1) Then
+                        DifferentCorners = True
+                        CheckRotation = False
+                        Exit Function
+                    End If
+
                     CheckRotation = True
                     Exit Function
                 Else
-                    ' Debug.Print " Different Edgebands"
+                    'Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
             Else
@@ -884,7 +893,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                 End If
 
                 If Not (GrainAngle1Rotated = GrainAngle2(0)) Then
-                    ' Debug.Print "Different panel grain angle"
+                    'Debug.Print "Different panel grain angle"
                     DifferentGrain = True
                     CheckRotation = False
                     Exit Function
@@ -908,23 +917,25 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                 End If
 
                 If Not (Compare(Top1Rotated, Top2) And Compare(Bottom1Rotated, Bottom2)) Then
-                    ' Debug.Print " Different Laminates"
+                    'Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
                 End If
             End If
             
-            ' Chekch Edgebands
+            ' Check Edgebands
             If NumofEdgebands1 > 0 Then
-                'Check Corners
-                If Corners1(0) <> Corners2(1) Or Corners1(1) <> Corners2(2) Or Corners1(2) <> Corners2(3) Or Corners1(3) <> Corners2(0) Then
-                    DifferentCorners = True
-                    CheckRotation = False
-                    Exit Function
-                End If
 
                 If Compare(Front1, Right2) And Compare(Back1, Left2) And Compare(Right1, Back2) And Compare(Left1, Front2) Then
+
+                    ' Check Corners
+                    If Corners1(0) <> Corners2(1) Or Corners1(1) <> Corners2(2) Or Corners1(2) <> Corners2(3) Or Corners1(3) <> Corners2(0) Then
+                        DifferentCorners = True
+                        CheckRotation = False
+                        Exit Function
+                    End If
+
                     CheckRotation = True
                     Exit Function
                 Else
@@ -940,12 +951,12 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Rotated -90 deg
             'Debug.Print " Front => Left, Back => Right, Right => Front, Left => Back"
 
-            'Check Panel grain angle
+            ' Check Panel grain angle
             If (GrainAngle1(1) And GrainAngle2(1)) Then
                 GrainAngle1Rotated = Abs(GrainAngle1(0) - 90)
 
                 If Not (GrainAngle1Rotated = GrainAngle2(0)) Then
-                    ' Debug.Print "Different panel grain angle"
+                    'Debug.Print "Different panel grain angle"
                     DifferentGrain = True
                     CheckRotation = False
                     Exit Function
@@ -969,7 +980,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                 End If
                 
                 If Not (Compare(Top1Rotated, Top2) And Compare(Bottom1Rotated, Bottom2)) Then
-                    ' Debug.Print " Different Laminates"
+                    'Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
@@ -978,14 +989,16 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                 
             ' Check Edgebands
             If NumofEdgebands1 > 0 Then
-                'Check Corners
+
+                If Compare(Front1, Left2) And Compare(Back1, Right2) And Compare(Right1, Front2) And Compare(Left1, Back2) Then
+            
+                ' Check Corners
                 If Corners1(0) <> Corners2(3) Or Corners1(1) <> Corners2(0) Or Corners1(2) <> Corners2(1) Or Corners1(3) <> Corners2(2) Then
                     DifferentCorners = True
                     CheckRotation = False
                     Exit Function
                 End If
 
-                If Compare(Front1, Left2) And Compare(Back1, Right2) And Compare(Right1, Front2) And Compare(Left1, Back2) Then
                     CheckRotation = True
                     Exit Function
                 Else
@@ -1012,7 +1025,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             If (GrainAngle1(1) And GrainAngle2(1)) Then
                 If Not (GrainAngle1(0) = GrainAngle2(0)) Then
                     CheckRotation = False
-                    ' Debug.Print "Different panel grain angle"
+                    'Debug.Print "Different panel grain angle"
                     DifferentGrain = True
                     Exit Function
                 End If
@@ -1021,7 +1034,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Check Laminates
             If NumofLaminates1 > 0 Then
                 If Not (Compare(Top1, Bottom2) And Compare(Bottom1, Top2)) Then
-                    ' Debug.Print " Different Laminates"
+                    'Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
@@ -1031,20 +1044,21 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Check Edgebands
             If NumofEdgebands1 > 0 Then
 
-                ' Check Corners
-                RotateCorners Corner2Rotated
-                
-                If Corners1(0) <> Corner2Rotated(3) Or Corners1(1) <> Corner2Rotated(2) Or Corners1(2) <> Corner2Rotated(1) Or Corners1(3) <> Corner2Rotated(0) Then
-                    DifferentCorners = True
-                    CheckRotation = False
-                    Exit Function
-                End If
-
                 If Compare(Front1, Front2) And Compare(Back1, Back2) And Compare(Right1, Left2) And Compare(Left1, Right2) Then
+
+                    ' Check Corners
+                    RotateCorners Corner2Rotated
+                    
+                    If Corners1(0) <> Corner2Rotated(3) Or Corners1(1) <> Corner2Rotated(2) Or Corners1(2) <> Corner2Rotated(1) Or Corners1(3) <> Corner2Rotated(0) Then
+                        DifferentCorners = True
+                        CheckRotation = False
+                        Exit Function
+                    End If
+
                     CheckRotation = True
                     Exit Function
                 Else
-                    ' Debug.Print " Different Edgebands"
+                    'Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
             Else
@@ -1057,12 +1071,12 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Rotated -90deg
             'Debug.Print " Front => Right, Back => Left, Right => Front, Left => Back "
 
-            'Check Panel grain angle
+            ' Check Panel grain angle
             If (GrainAngle1(1) And GrainAngle2(1)) Then
                 GrainAngle1Rotated = Abs(GrainAngle1(0) - 90)
 
                 If Not (GrainAngle1Rotated = GrainAngle2(0)) Then
-                    ' Debug.Print "Different panel grain angle"
+                    'Debug.Print "Different panel grain angle"
                     DifferentGrain = True
                     CheckRotation = False
                     Exit Function
@@ -1078,7 +1092,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                 Bottom1Rotated(2) = Abs(Bottom1(2) - 90)
 
                 If Not (Compare(Top1Rotated, Bottom2) And Compare(Bottom1Rotated, Top2)) Then
-                    ' Debug.Print " Different Laminates"
+                    'Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
@@ -1088,20 +1102,21 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Check Edgebands
             If NumofEdgebands1 > 0 Then
             
-                'Check Corners
-                RotateCorners Corner2Rotated
-                
-                If Corners1(0) <> Corner2Rotated(0) Or Corners1(1) <> Corner2Rotated(3) Or Corners1(2) <> Corner2Rotated(2) Or Corners1(3) <> Corner2Rotated(1) Then
-                    DifferentCorners = True
-                    CheckRotation = False
-                    Exit Function
-                End If
-
                 If Compare(Front1, Right2) And Compare(Back1, Left2) And Compare(Right1, Front2) And Compare(Left1, Back2) Then
+
+                    ' Check Corners
+                    RotateCorners Corner2Rotated
+                    
+                    If Corners1(0) <> Corner2Rotated(0) Or Corners1(1) <> Corner2Rotated(3) Or Corners1(2) <> Corner2Rotated(2) Or Corners1(3) <> Corner2Rotated(1) Then
+                        DifferentCorners = True
+                        CheckRotation = False
+                        Exit Function
+                    End If
+
                     CheckRotation = True
                     Exit Function
                 Else
-                    ' Debug.Print " Different Edgebands"
+                    'Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
             Else
@@ -1114,7 +1129,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Rotated +90deg
             'Debug.Print " Front => Left, Back => Right, Right => Back, Left => Front"
             
-            'Check Panel grain angle
+            ' Check Panel grain angle
             If (GrainAngle1(1) And GrainAngle2(1)) Then
                 GrainAngle1Rotated = GrainAngle1(0) + 90
                 
@@ -1123,7 +1138,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                 End If
                 
                 If Not GrainAngle1Rotated = GrainAngle2(0) Then
-                    ' Debug.Print "Different panel grain angle"
+                    'Debug.Print "Different panel grain angle"
                     DifferentGrain = True
                     CheckRotation = False
                     Exit Function
@@ -1147,7 +1162,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
                 End If
 
                 If Not (Compare(Top1Rotated, Bottom2) And Compare(Bottom1Rotated, Top2)) Then
-                    ' Debug.Print " Different Laminates"
+                    'Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
@@ -1157,20 +1172,21 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Check Edgebands
             If NumofEdgebands1 > 0 Then
 
-                ' Check Corners
-                RotateCorners Corner2Rotated
-                
-                If Corners1(0) <> Corner2Rotated(2) Or Corners1(1) <> Corner2Rotated(1) Or Corners1(2) <> Corner2Rotated(0) Or Corners1(3) <> Corner2Rotated(3) Then
-                    DifferentCorners = True
-                    CheckRotation = False
-                    Exit Function
-                End If
-
                 If Compare(Front1, Left2) And Compare(Back1, Right2) And Compare(Right1, Back2) And Compare(Left1, Front2) Then
+
+                    ' Check Corners
+                    RotateCorners Corner2Rotated
+                    
+                    If Corners1(0) <> Corner2Rotated(2) Or Corners1(1) <> Corner2Rotated(1) Or Corners1(2) <> Corner2Rotated(0) Or Corners1(3) <> Corner2Rotated(3) Then
+                        DifferentCorners = True
+                        CheckRotation = False
+                        Exit Function
+                    End If
+
                     CheckRotation = True
                     Exit Function
                 Else
-                    ' Debug.Print " Different Edgebands"
+                    'Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
             Else
@@ -1183,10 +1199,10 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Rotated 180 deg
             'Debug.Print " Front => Back, Back => Front, Right => Right, Left => Left"
 
-            'Check Panel grain angle
+            ' Check Panel grain angle
             If (GrainAngle1(1) And GrainAngle2(1)) Then
                 If Not (GrainAngle1(0) = GrainAngle2(0)) Then
-                    ' Debug.Print "Different panel grain angle"
+                    'Debug.Print "Different panel grain angle"
                     DifferentGrain = True
                     CheckRotation = False
                     Exit Function
@@ -1196,7 +1212,7 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
             ' Check Laminates
             If NumofLaminates1 > 0 Then
                 If Not (Compare(Top1, Bottom2) And Compare(Bottom1, Top2)) Then
-                    ' Debug.Print " Different Laminates"
+                    'Debug.Print " Different Laminates"
                     DifferentLam = True
                     CheckRotation = False
                     Exit Function
@@ -1205,21 +1221,22 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
 
             ' Check Edgebands
             If NumofEdgebands1 > 0 Then
-
-                ' Check Corners
-                RotateCorners Corner2Rotated
-                
-                If Corners1(0) <> Corner2Rotated(1) Or Corners1(1) <> Corner2Rotated(0) Or Corners1(2) <> Corner2Rotated(3) Or Corners1(3) <> Corner2Rotated(2) Then
-                    DifferentCorners = True
-                    CheckRotation = False
-                    Exit Function
-                End If
-                
+              
                 If Compare(Front1, Back2) And Compare(Back1, Front2) And Compare(Right1, Right2) And Compare(Left1, Left2) Then
+
+                    ' Check Corners
+                    RotateCorners Corner2Rotated
+                    
+                    If Corners1(0) <> Corner2Rotated(1) Or Corners1(1) <> Corner2Rotated(0) Or Corners1(2) <> Corner2Rotated(3) Or Corners1(3) <> Corner2Rotated(2) Then
+                        DifferentCorners = True
+                        CheckRotation = False
+                        Exit Function
+                    End If
+
                     CheckRotation = True
                     Exit Function
                 Else
-                    ' Debug.Print " Different Edgebands"
+                    'Debug.Print " Different Edgebands"
                     DifferentEB = True
                 End If
             Else
@@ -1608,14 +1625,4 @@ Function GroupPanels(List As Variant)
     Next i
 
 End Function
-
-
-
-
-
-
-
-
-
-
 
