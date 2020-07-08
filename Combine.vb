@@ -1,5 +1,7 @@
 ' V0.6 takes into account grain direction
 ' excludes panels with vertical grain option
+' Excludes panels with wront view orientation
+' Excludes panels with angles different to 0 or 90
 
 '####Logic
 
@@ -57,6 +59,7 @@ Dim UserName                As String
 Dim ErrorMessages           As Integer
 Dim ExcludedGrain           As String
 Dim ExcludedView            As String
+Dim ExcludedAngle           As String
 
 Dim CurrentProgress         As Double
 Dim BarWidth                As Long
@@ -76,6 +79,7 @@ Sub Main()
     ErrorMessages = 0
     ExcludedView = ""
     ExcludedGrain = ""
+    ExcludedAngle = ""
     FrontView = Array(1, 0, 0, 0, 1, 0, 0, 0, 1)
     
     Debug.Print ""
@@ -142,6 +146,11 @@ Sub Main()
 '    GroupPanels (PartList)
     
     NumofParts = UBound(PartList) + 1
+    
+    If NumofParts < 2 Then
+        GoTo ExitCode
+    End If
+    
     'Debug.Print "Number of parts: " & NumofParts
     
     NumofChecks = (NumofParts * (NumofParts - 1)) / 2
@@ -205,16 +214,25 @@ ExitCode:
         GoTo EndCode
     End If
     
-    If ExcludedView <> "" Or ExcludedGrain <> "" Then
-        If ExcludedGrain = "" Then
-            MsgBox "Excluded parts due to wrong view orientation:      " + vbCrLf + ExcludedView, vbExclamation, "Error"
-        ElseIf ExcludedView = "" Then
-            MsgBox "Excluded parts due to 'Grain is Vertical' checked: " + vbCrLf + ExcludedGrain, vbExclamation, "Error"
-        Else
-            MsgBox "Excluded parts due to wrong view orientation: " + vbCrLf + ExcludedView + vbCrLf + "Excluded parts due to 'Grain is Vertical' checked: " + vbCrLf + ExcludedGrain, vbExclamation, "Excluded Parts"
+    If ExcludedView <> "" Or ExcludedGrain <> "" Or ExcludedAngle <> "" Then
+        Dim Message As String
+
+        If ExcludedView <> "" Then
+            Message = Message + "Wrong view orientation:      " + vbCrLf + ExcludedView + vbCrLf
         End If
+    
+        If ExcludedGrain <> "" Then
+            Message = Message + "'Grain is Vertical' checked: " + vbCrLf + ExcludedGrain + vbCrLf
+        End If
+
+        If ExcludedAngle <> "" Then
+            Message = Message + "Length angle different to 0 or 90 deg: " + vbCrLf + ExcludedAngle
+        End If
+
+        MsgBox Message, vbExclamation, "Excluded Parts"
+
     End If
-       
+
     ' Exit Sub and don't proceed to ErrorHandler
     GoTo EndCode
 '    Exit Sub
@@ -315,7 +333,7 @@ Sub CombineParts(Model1 As String, Model2 As String)
     End If
 
     ' Check if both Parts have the same material. Skip coincidence check if not
-    If Not Material1 = Material2 Then
+    If Material1 <> Material2 Then
         Exit Sub
     End If
 
@@ -454,7 +472,8 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
 
     ' Original SWOODDesign.cfg
     ' Get Panel1 Data
-    Debug.Print " Grain angle1: " & cusPropMgr1.Get("SWOODCP_PanelGrainAngleInFrontView")
+    
+    'Debug.Print " Grain angle1: " & cusPropMgr1.Get("SWOODCP_PanelGrainAngleInFrontView")
     If Not IsNumeric(cusPropMgr1.Get("SWOODCP_PanelGrainAngleInFrontView")) Then
         Debug.Print "Unable to get grain angle for " & ModelName1
         fileStream.WriteLine "  Unable to get grain angle for " & ModelName1 & ". Check if Front View if normal to top face"
@@ -490,30 +509,9 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     ' Left1 = Array(cusPropMgr1.Get("Swood_EBLeft_Material"), cusPropMgr1.Get("SWOODCP_EdgeLeftThickness"))
     ' Right1 = Array(cusPropMgr1.Get("Swood_EBRight_Material"), cusPropMgr1.Get("Swood_EBRight_Thickness"))
 
-    ' Rotate Edgebands and corners
-    If GrainAngle1(0) = 90 Then
-   
-        Dim TempLeft        As Variant
-        Dim TempLF          As Variant
-
-        TempLeft = Left1
-
-        Left1 = Back1
-        Back1 = Right1
-        Right1 = Front1
-        Front1 = TempLeft
-
-        TempLF = Corners1(3)
-        Corners1(3) = Corners1(2)
-        Corners1(2) = Corners1(1)
-        Corners1(1) = Corners1(0)
-        Corners1(0) = TempLF
-
-    End If
-
     ' Get Panel2 Data
-    Debug.Print " Grain angle2: " & cusPropMgr2.Get("SWOODCP_PanelGrainAngleInFrontView")
     
+    'Debug.Print " Grain angle2: " & cusPropMgr2.Get("SWOODCP_PanelGrainAngleInFrontView")
     If Not IsNumeric(cusPropMgr2.Get("SWOODCP_PanelGrainAngleInFrontView")) Then
         Debug.Print "Unable to get grain angle for " & ModelName2
         fileStream.WriteLine "  Unable to get grain angle for " & ModelName2 & ". Check if Front View if normal to top face"
@@ -549,24 +547,6 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     ' Left2 = Array(cusPropMgr2.Get("Swood_EBLeft_Material"), cusPropMgr2.Get("Swood_EBLeft_Thickness"))
     ' Right2 = Array(cusPropMgr2.Get("Swood_EBRight_Material"), cusPropMgr2.Get("Swood_EBRight_Thickness"))
 
-    ' Rotate Edgebands and Corners
-    If GrainAngle2(0) = 90 Then
-
-        TempLeft = Left2
-
-        Left2 = Back2
-        Back2 = Right2
-        Right2 = Front2
-        Front2 = TempLeft
-
-        TempLF = Corners2(3)
-        Corners2(3) = Corners2(2)
-        Corners2(2) = Corners2(1)
-        Corners2(1) = Corners2(0)
-        Corners2(0) = TempLF
-
-    End If
-        
     ' Get number of Edgebands
     If Front1(0) <> "" Then NumofEdgebands1 = NumofEdgebands1 + 1
     If Back1(0) <> "" Then NumofEdgebands1 = NumofEdgebands1 + 1
@@ -590,26 +570,59 @@ Function CheckProperties(swModel1 As SldWorks.ModelDoc2, swModel2 As SldWorks.Mo
     'Debug.Print "Number of Laminates 1: " & NumofLaminates1
     'Debug.Print "Number of Laminates 2: " & NumofLaminates2
     
-    If Not (NumofEdgebands1 = NumofEdgebands2 And NumofLaminates1 = NumofLaminates2) Then
+    If NumofEdgebands1 <> NumofEdgebands2 Then
         CheckProperties = False
-        Debug.Print " Different number of Edgebands and Laminates"
+        Debug.Print " Different number of Edgebands"
+        fileStream.WriteLine "  Different number of Edgebands: " + vbCrLf + "     " + ModelName1 + vbCrLf + "     " + ModelName2
         Exit Function
     End If
-    
-    
-    '####################### move this check after grain check!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'    If NumofEdgebands1 + NumofEdgebands2 + NumofLaminates1 + NumofLaminates2 = 0 Then
-'        Debug.Print " No Edgebands or Laminates present"
-'        CheckProperties = True
-'        Exit Function
-'    ElseIf NumofEdgebands1 + NumofEdgebands2 = 0 Then Debug.Print " No Edgebands present"
-'
-'    ElseIf NumofLaminates1 + NumofLaminates2 = 0 Then Debug.Print " No Laminates present"
-'
-'    End If
-    
-    'Debug.Print "CheckProperties result: " & CheckProperties
-        
+
+    If NumofLaminates1 <> NumofLaminates2 Then
+        CheckProperties = False
+        Debug.Print " Different number of  Laminates"
+        fileStream.WriteLine "  Different number of  Laminates: " + vbCrLf + "     " + ModelName1 + vbCrLf + "     " + ModelName2
+        Exit Function
+    End If
+
+    ' Rotate Edgebands and corners of Panel 1
+    If GrainAngle1(0) = 90 Then
+   
+        Dim TempLeft        As Variant
+        Dim TempLF          As Variant
+
+        TempLeft = Left1
+
+        Left1 = Back1
+        Back1 = Right1
+        Right1 = Front1
+        Front1 = TempLeft
+
+        TempLF = Corners1(3)
+        Corners1(3) = Corners1(2)
+        Corners1(2) = Corners1(1)
+        Corners1(1) = Corners1(0)
+        Corners1(0) = TempLF
+
+    End If
+
+    ' Rotate Edgebands and Corners of Panel 2
+    If GrainAngle2(0) = 90 Then
+
+        TempLeft = Left2
+
+        Left2 = Back2
+        Back2 = Right2
+        Right2 = Front2
+        Front2 = TempLeft
+
+        TempLF = Corners2(3)
+        Corners2(3) = Corners2(2)
+        Corners2(2) = Corners2(1)
+        Corners2(1) = Corners2(0)
+        Corners2(0) = TempLF
+
+    End If
+         
     ' Check Symmetry type
     SymmetryType = GetSymmetryType(swBody1)
     Debug.Print " Panel Type : " & SymmetryType
@@ -1354,6 +1367,17 @@ Function GetParts(Assembly As SldWorks.AssemblyDoc) As Variant
                                 GoTo NextIteration
                             End If
                             
+                            ' Check if Part Length direction is different to 0 or 90 deg and skip
+                            Dim TEST As Double
+                            TEST = CDbl(ConfigPropMgr.Get("SWOODCP_PanelGrainAngleInFrontView"))
+                            If CDbl(ConfigPropMgr.Get("SWOODCP_PanelGrainAngleInFrontView")) <> 0 And CDbl(ConfigPropMgr.Get("SWOODCP_PanelGrainAngleInFrontView")) <> 90 Then
+                                Debug.Print PartName & " Length angle different to 0 or 90 deg"
+                                fileStream.WriteLine "  Excluded due to Length angle different to 0 or 90 deg: " & PartName
+                                ExcludedAngle = ExcludedAngle + "  " + PartName + vbCrLf
+                                ExcludedParts.Add Path, 1
+                                GoTo NextIteration
+                            End If
+                            
                             ' Add to Parts list
                             swBomQuant.Add Path, 1
                             
@@ -1508,6 +1532,9 @@ Function UpdateBar(Maxiter As Integer, ByVal caption As String)
     Progress = Progress + 1
     Maxiter = Maxiter + 1 'Base 0
     
+    ' Avoid division by zero
+    If Maxiter = 0 Then Maxiter = 1
+    
     ' Update Progress Bar
     CurrentProgress = Progress / Maxiter
     BarWidth = ProgressBar.Frame.Width * CurrentProgress
@@ -1625,3 +1652,6 @@ Function GroupPanels(List As Variant)
     Next i
 
 End Function
+
+
+
